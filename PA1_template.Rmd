@@ -1,25 +1,80 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Assignment 2 - R Markdown"
+author: "M. Yeung"
+date: "November 20, 2016"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
+Read the CSV file into activity
+
+```{r read file}
+data <- read.csv('./data/activity.csv')
+activity <- na.omit(data)
+```
 
 
+##What is mean total number of steps taken per day?
+Plot Histogram, find Mean and Median
+```{r historgram}
+StepsTotal <- tapply(activity$steps, activity$date, sum)
+hist(StepsTotal, main="Histogram of steps taken", xlab="Total steps taken per day")
 
-## What is mean total number of steps taken per day?
+orgmean <- mean(StepsTotal, na.rm = TRUE)
+print(orgmean)
+orgmedian <-median(StepsTotal,na.rm=TRUE)
+print(orgmedian)
+```
 
+##What is the average daily activity pattern?
+Average Steps activity per 5 min interval
+```{r Average Interval}
+StepsInterval <- tapply(activity$steps, activity$interval,  mean, na.rm=TRUE)
+plot(StepsInterval, type="l", main="Average steps per interval", xlab="Average number of steps", ylab="Average across all days")
+#Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+names(which.max(StepsInterval))
+```
 
+##Imputing missing values
+Average Steps activity per 5 min interval
+```{r Imputing}
+#Total NA
+sum(is.na(data$steps))
+#fill in missing NA data with Average of that interval
+AverageStep <- aggregate(steps ~ interval, data = data, FUN = mean)
+newdata <- data
+for (i in 1:nrow(data)) {
+    if (is.na(newdata[i, ]$steps)) {
+        newdata[i,]$steps <- subset(AverageStep, interval == data[i, ]$interval)$steps
+    }
+}
+newStepsTotal <- tapply(newdata$steps, newdata$date, sum, na.rm=TRUE)
+hist(newStepsTotal, main="New histogram of steps taken", xlab="Total steps taken per day")
+#Mean and Median
+newmean<-mean(newStepsTotal, na.rm = TRUE)
+print(newmean)
+newmedian<-median(newStepsTotal,na.rm=TRUE)
+print(newmedian)
 
-## What is the average daily activity pattern?
+#comparing old vs new mean
+abs(newmean-orgmean)
+#comparing old vs new median
+abs(newmedian-orgmedian)
 
+```
 
+##Are there differences in activity patterns between weekdays and weekends?
+```{r Week}
+library(lattice)
+library(plyr)
+#Weekday and Weekend variable in new column
+newdata$weekdays <- weekdays(as.Date(newdata$date))
+newdata$weekdays <- ifelse(newdata$weekdays %in% c("Saturday", "Sunday"),"Weekend", "Weekday")
+newStepsInterval <- ddply(newdata, .(interval, weekdays), summarise, steps=mean(steps))
+xyplot(steps ~ interval | weekdays, data = newStepsInterval, layout = c(1, 2), type="l", xlab = "5 min interval", ylab = "Total number of steps")
+```
 
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
